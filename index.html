@@ -519,6 +519,10 @@
         }
         .map-embed { margin-top: 1.5rem; }
         .map-embed iframe { width: 100%; height: 220px; border: 0; border-radius: 8px; }
+        .form-status { margin-top: 0.75rem; min-height: 1.25rem; font-size: 0.95rem; }
+        .form-status.success { color: #2e7d32; }
+        .form-status.error { color: #b00020; }
+        .submit-button[disabled] { opacity: 0.7; cursor: not-allowed; }
 
         /* Footer */
         footer {
@@ -895,7 +899,7 @@
             </div>
 
             <div class="contact-form">
-                <form action="#" method="POST">
+                <form id="contact-form" action="/api/send-email" method="POST">
                     <div class="form-group">
                         <label for="name">Nimi</label>
                         <input type="text" id="name" name="name" required>
@@ -916,7 +920,8 @@
                         <textarea id="message" name="message" required></textarea>
                     </div>
 
-                    <button type="submit" class="submit-button">Saada</button>
+                    <button type="submit" class="submit-button" id="submit-button">Saada</button>
+                    <p class="form-status" role="status" aria-live="polite"></p>
 
                     <p class="privacy-notice">Saates päringu, annate nõusoleku oma isikuandmete töötlemiseks ja nõustute privaatsuspoliitikaga.</p>
                 </form>
@@ -990,10 +995,65 @@
             });
         }
 
+        // Contact form AJAX submit
+        function initContactForm() {
+            const form = document.getElementById('contact-form');
+            if (!form) return;
+            const submitBtn = document.getElementById('submit-button');
+            const statusEl = form.querySelector('.form-status');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (statusEl) { statusEl.textContent = ''; statusEl.className = 'form-status'; }
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saadan...'; }
+
+                try {
+                    const payload = {
+                        name: form.querySelector('#name')?.value?.trim() || '',
+                        email: form.querySelector('#email')?.value?.trim() || '',
+                        phone: form.querySelector('#phone')?.value?.trim() || '',
+                        message: form.querySelector('#message')?.value?.trim() || '',
+                    };
+
+                    const res = await fetch(form.getAttribute('action') || '/api/send-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (res.ok) {
+                        if (statusEl) {
+                            statusEl.textContent = 'Sõnum on saadetud! Võtame teiega peagi ühendust.';
+                            statusEl.classList.add('success');
+                        }
+                        form.reset();
+                    } else {
+                        let errText = 'Vabandame, saatmine ebaõnnestus. Palun proovige uuesti.';
+                        try {
+                            const data = await res.json();
+                            if (data && data.error) errText = `${errText} (${data.error})`;
+                        } catch (_) {}
+                        if (statusEl) {
+                            statusEl.textContent = errText;
+                            statusEl.classList.add('error');
+                        }
+                    }
+                } catch (err) {
+                    if (statusEl) {
+                        statusEl.textContent = 'Võrguviga. Palun proovige hiljem uuesti.';
+                        statusEl.classList.add('error');
+                    }
+                } finally {
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Saada'; }
+                }
+            });
+        }
+
         // Run on page load
         window.addEventListener('DOMContentLoaded', () => {
             revealOnScroll();
             initFaqToggle();
+            initContactForm();
         });
         
         // Run on scroll
