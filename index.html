@@ -111,6 +111,11 @@
             line-height: 1.2;
         }
 
+        /* Smooth scroll for in-page anchors */
+        html { scroll-behavior: smooth; }
+        /* Prevent anchor content from hiding under sticky header */
+        section[id] { scroll-margin-top: 90px; }
+
         /* Header */
         header {
             background: var(--white);
